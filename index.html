@@ -1,0 +1,1757 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Imperial & Metric Construction Calculator</title>
+  <meta name="description" content="Responsive single-file construction calculator with feet-and-inches arithmetic, fraction reduction, unit converter, and persistent history.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700;800&family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-canvas: #090D16;
+      --bg-surface: #111827;
+      --bg-surface-elevated: #1E293B;
+      --bg-surface-accent: #0F172A;
+      --accent-amber: #F59E0B;
+      --accent-amber-light: #FCD34D;
+      --accent-amber-glow: rgba(245, 158, 11, 0.18);
+      --accent-sky: #38BDF8;
+      --accent-sky-bg: rgba(56, 189, 248, 0.12);
+      --accent-emerald: #10B981;
+      --accent-rose: #EF4444;
+      --text-main: #F8FAFC;
+      --text-muted: #94A3B8;
+      --border-subtle: #334155;
+      --border-card: #1F2937;
+      --font-sans: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+      --font-mono: 'JetBrains Mono', monospace;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    body {
+      background-color: var(--bg-canvas);
+      color: var(--text-main);
+      font-family: var(--font-sans);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-start;
+      overflow-x: hidden;
+    }
+
+    /* Container */
+    .app-wrapper {
+      width: 100%;
+      max-width: 480px;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      background-color: var(--bg-canvas);
+      position: relative;
+      box-shadow: 0 0 50px rgba(0, 0, 0, 0.5);
+    }
+
+    @media (min-width: 640px) {
+      .app-wrapper {
+        min-height: calc(100vh - 40px);
+        margin: 20px auto;
+        border-radius: 28px;
+        border: 1px solid var(--border-card);
+        overflow: hidden;
+      }
+    }
+
+    /* App Header */
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 18px;
+      background-color: rgba(17, 24, 39, 0.85);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border-card);
+      position: sticky;
+      top: 0;
+      z-index: 30;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 15px;
+      font-weight: 800;
+      letter-spacing: -0.01em;
+      color: var(--text-main);
+    }
+
+    .brand-dot {
+      width: 9px;
+      height: 9px;
+      border-radius: 50%;
+      background-color: var(--accent-amber);
+    }
+
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .btn-icon {
+      background: none;
+      border: none;
+      color: var(--text-muted);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 6px;
+      border-radius: 8px;
+      transition: color 0.15s, background 0.15s;
+    }
+
+    .btn-icon:hover {
+      color: var(--text-main);
+      background: var(--bg-surface-elevated);
+    }
+
+    /* Tab Navigation */
+    .tabs-bar {
+      display: flex;
+      background: var(--bg-surface);
+      border-bottom: 1px solid var(--border-card);
+      padding: 4px;
+      gap: 4px;
+    }
+
+    .tab-btn {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      padding: 10px 4px;
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--text-muted);
+      background: transparent;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .tab-btn.active {
+      color: #090D16;
+      background-color: var(--accent-amber);
+      box-shadow: 0 2px 8px rgba(245, 158, 11, 0.25);
+    }
+
+    /* Main Tab Content View */
+    .tab-content {
+      display: none;
+      flex-direction: column;
+      flex: 1;
+      padding: 14px;
+      gap: 12px;
+    }
+
+    .tab-content.active {
+      display: flex;
+    }
+
+    /* --- CALCULATOR TAB --- */
+    .display-card {
+      background-color: var(--bg-surface);
+      border: 1px solid var(--border-card);
+      border-radius: 20px;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.3);
+    }
+
+    .display-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 11px;
+      color: var(--text-muted);
+      border-bottom: 1px solid rgba(51, 65, 85, 0.4);
+      padding-bottom: 8px;
+    }
+
+    .precision-selector {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      font-family: var(--font-mono);
+      font-weight: 600;
+    }
+
+    .precision-selector select {
+      background: var(--bg-surface-elevated);
+      color: var(--accent-amber);
+      border: 1px solid var(--border-subtle);
+      border-radius: 6px;
+      padding: 3px 6px;
+      font-family: var(--font-mono);
+      font-size: 11px;
+      font-weight: 700;
+      cursor: pointer;
+      outline: none;
+    }
+
+    .dimension-badge {
+      font-family: var(--font-mono);
+      font-size: 10px;
+      font-weight: 800;
+      padding: 2px 6px;
+      border-radius: 4px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      background: var(--bg-surface-elevated);
+      color: var(--text-muted);
+    }
+
+    .dimension-badge.length {
+      background: rgba(56, 189, 248, 0.15);
+      color: var(--accent-sky);
+      border: 1px solid rgba(56, 189, 248, 0.3);
+    }
+
+    .dimension-badge.area {
+      background: rgba(16, 185, 129, 0.15);
+      color: var(--accent-emerald);
+      border: 1px solid rgba(16, 185, 129, 0.3);
+    }
+
+    .expression-tape {
+      font-family: var(--font-mono);
+      font-size: 17px;
+      color: var(--text-muted);
+      min-height: 26px;
+      overflow-x: auto;
+      white-space: nowrap;
+      text-align: right;
+      scrollbar-width: none;
+    }
+
+    .expression-tape::-webkit-scrollbar {
+      display: none;
+    }
+
+    .primary-result {
+      font-family: var(--font-mono);
+      font-size: 34px;
+      font-weight: 800;
+      color: var(--text-main);
+      text-align: right;
+      word-break: break-all;
+      line-height: 1.1;
+      letter-spacing: -0.02em;
+    }
+
+    .primary-result.error {
+      font-size: 18px;
+      color: var(--accent-rose);
+      font-weight: 600;
+    }
+
+    .secondary-readout {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 8px;
+      font-family: var(--font-mono);
+      font-size: 12px;
+      color: var(--accent-amber);
+      border-top: 1px solid rgba(51, 65, 85, 0.3);
+      padding-top: 8px;
+    }
+
+    .secondary-readout .metric-tag {
+      color: var(--accent-sky);
+    }
+
+    /* Keypad */
+    .keypad-grid {
+      display: flex;
+      flex-direction: column;
+      gap: 7px;
+      margin-top: 4px;
+    }
+
+    .key-row {
+      display: grid;
+      gap: 7px;
+    }
+
+    .key-row-4 {
+      grid-template-columns: repeat(4, 1fr);
+    }
+
+    .key-row-5 {
+      grid-template-columns: repeat(5, 1fr);
+    }
+
+    button.calc-key {
+      min-height: 48px;
+      border-radius: 12px;
+      border: 1px solid var(--border-subtle);
+      font-family: var(--font-mono);
+      font-size: 17px;
+      font-weight: 700;
+      color: var(--text-main);
+      background-color: var(--bg-surface-elevated);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: transform 0.08s ease, background 0.15s, border-color 0.15s;
+      user-select: none;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    }
+
+    button.calc-key:active {
+      transform: scale(0.94);
+      background-color: rgba(245, 158, 11, 0.25);
+      border-color: var(--accent-amber);
+    }
+
+    /* Key Variants */
+    button.calc-key.key-fraction {
+      font-size: 13px;
+      min-height: 40px;
+      color: var(--accent-amber);
+      border-color: rgba(245, 158, 11, 0.3);
+      background: rgba(245, 158, 11, 0.08);
+    }
+
+    button.calc-key.key-unit {
+      color: var(--accent-sky);
+      border-color: rgba(56, 189, 248, 0.4);
+      background: var(--accent-sky-bg);
+      font-weight: 800;
+    }
+
+    button.calc-key.key-op {
+      color: var(--accent-amber-light);
+      background: rgba(245, 158, 11, 0.15);
+      border-color: rgba(245, 158, 11, 0.35);
+      font-size: 21px;
+      font-weight: 800;
+    }
+
+    button.calc-key.key-clear {
+      color: var(--accent-rose);
+      background: rgba(239, 68, 68, 0.12);
+      border-color: rgba(239, 68, 68, 0.35);
+      font-size: 15px;
+    }
+
+    button.calc-key.key-equals {
+      grid-column: span 2;
+      background: var(--accent-amber);
+      color: #090D16;
+      font-size: 26px;
+      font-weight: 900;
+      border-color: var(--accent-amber-light);
+      box-shadow: 0 4px 12px rgba(245, 158, 11, 0.35);
+    }
+
+    button.calc-key.key-equals:active {
+      background: var(--accent-amber-light);
+    }
+
+    /* Presets Strip */
+    .presets-bar {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      overflow-x: auto;
+      scrollbar-width: none;
+      padding-bottom: 2px;
+    }
+
+    .presets-bar::-webkit-scrollbar {
+      display: none;
+    }
+
+    .preset-chip {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-card);
+      color: var(--text-muted);
+      font-family: var(--font-mono);
+      font-size: 11px;
+      padding: 5px 9px;
+      border-radius: 8px;
+      white-space: nowrap;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .preset-chip:hover {
+      color: var(--accent-amber);
+      border-color: var(--accent-amber);
+    }
+
+    /* --- CONVERTER TAB --- */
+    .converter-card {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-card);
+      border-radius: 18px;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .converter-mode-selector {
+      display: flex;
+      background: var(--bg-surface-accent);
+      border: 1px solid var(--border-subtle);
+      border-radius: 12px;
+      padding: 3px;
+      gap: 3px;
+    }
+
+    .conv-mode-btn {
+      flex: 1;
+      padding: 8px;
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--text-muted);
+      background: none;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .conv-mode-btn.active {
+      color: #090D16;
+      background: var(--accent-amber);
+    }
+
+    .conv-label {
+      font-size: 11px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--accent-amber);
+      margin-bottom: 4px;
+    }
+
+    .conv-label.to {
+      color: var(--accent-sky);
+    }
+
+    .conv-input-row {
+      display: flex;
+      gap: 8px;
+    }
+
+    .conv-select {
+      flex: 1;
+      background: var(--bg-surface-elevated);
+      border: 1px solid var(--border-subtle);
+      color: var(--text-main);
+      padding: 10px 12px;
+      border-radius: 10px;
+      font-size: 13px;
+      font-weight: 600;
+      outline: none;
+      cursor: pointer;
+    }
+
+    .conv-input {
+      flex: 1;
+      background: var(--bg-surface-elevated);
+      border: 1px solid var(--border-subtle);
+      color: var(--text-main);
+      font-family: var(--font-mono);
+      font-size: 16px;
+      font-weight: 700;
+      padding: 10px 12px;
+      border-radius: 10px;
+      outline: none;
+    }
+
+    .conv-input:focus, .conv-select:focus {
+      border-color: var(--accent-amber);
+    }
+
+    .swap-btn-container {
+      display: flex;
+      justify-content: center;
+      margin: -6px 0;
+      position: relative;
+      z-index: 5;
+    }
+
+    .swap-btn {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      background: var(--bg-surface-elevated);
+      border: 1px solid var(--border-subtle);
+      color: var(--accent-amber);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: transform 0.25s ease, background 0.15s;
+    }
+
+    .swap-btn:hover {
+      transform: rotate(180deg);
+      background: var(--bg-surface);
+    }
+
+    .conv-result-box {
+      background: var(--bg-surface-accent);
+      border: 1px solid var(--border-card);
+      border-radius: 12px;
+      padding: 14px;
+      margin-top: 4px;
+    }
+
+    .conv-result-value {
+      font-family: var(--font-mono);
+      font-size: 28px;
+      font-weight: 800;
+      color: var(--text-main);
+      word-break: break-all;
+    }
+
+    .conv-result-symbol {
+      font-size: 14px;
+      color: var(--accent-sky);
+      font-weight: 700;
+      margin-left: 4px;
+    }
+
+    .conv-framing-breakdown {
+      margin-top: 8px;
+      padding-top: 8px;
+      border-top: 1px solid var(--border-card);
+      display: flex;
+      justify-content: space-between;
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+
+    .conv-framing-breakdown strong {
+      color: var(--accent-amber);
+      font-family: var(--font-mono);
+    }
+
+    /* --- HISTORY TAB --- */
+    .history-toolbar {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 6px;
+    }
+
+    .search-input {
+      flex: 1;
+      background: var(--bg-surface);
+      border: 1px solid var(--border-card);
+      border-radius: 10px;
+      padding: 8px 12px;
+      color: var(--text-main);
+      font-size: 13px;
+      outline: none;
+    }
+
+    .search-input:focus {
+      border-color: var(--accent-amber);
+    }
+
+    .btn-action-small {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-card);
+      color: var(--text-muted);
+      border-radius: 10px;
+      padding: 8px 12px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .btn-action-small:hover {
+      color: var(--text-main);
+      background: var(--bg-surface-elevated);
+    }
+
+    .btn-action-small.danger {
+      color: var(--accent-rose);
+      border-color: rgba(239, 68, 68, 0.3);
+    }
+
+    .history-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      max-height: 480px;
+      overflow-y: auto;
+      padding-right: 2px;
+    }
+
+    .history-item {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-card);
+      border-radius: 14px;
+      padding: 12px 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      cursor: pointer;
+      transition: border-color 0.15s, background 0.15s;
+    }
+
+    .history-item:hover {
+      border-color: var(--accent-amber);
+      background: rgba(30, 41, 59, 0.4);
+    }
+
+    .history-meta {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 11px;
+      color: var(--text-muted);
+    }
+
+    .history-expr {
+      font-family: var(--font-mono);
+      font-size: 13px;
+      color: var(--text-muted);
+      word-break: break-all;
+    }
+
+    .history-res-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      border-top: 1px solid rgba(51, 65, 85, 0.3);
+      padding-top: 6px;
+    }
+
+    .history-res-main {
+      font-family: var(--font-mono);
+      font-size: 17px;
+      font-weight: 800;
+      color: var(--accent-amber);
+    }
+
+    .history-res-sub {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: var(--text-muted);
+    }
+
+    .empty-state {
+      text-align: center;
+      color: var(--text-muted);
+      font-size: 13px;
+      padding: 40px 10px;
+    }
+
+    /* Toast Notification */
+    .toast {
+      position: fixed;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: var(--accent-amber);
+      color: #090D16;
+      font-size: 12px;
+      font-weight: 800;
+      padding: 8px 16px;
+      border-radius: 20px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.2s ease, transform 0.2s ease;
+      z-index: 100;
+    }
+
+    .toast.show {
+      opacity: 1;
+      transform: translateX(-50%) translateY(-6px);
+    }
+  </style>
+<script src="/_aistudio-iframe.js?v=6634132a"></script></head>
+<body>
+
+  <div class="app-wrapper">
+    <!-- Header -->
+    <header>
+      <div class="brand">
+        <span class="brand-dot"></span>
+        <span>BuildCalc M3</span>
+      </div>
+      <div class="header-actions">
+        <button id="btnCopyResult" class="btn-icon" title="Copy active result">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect width="14" height="14" x="8" y="8" rx="2" ry="2"/>
+            <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/>
+          </svg>
+        </button>
+      </div>
+    </header>
+
+    <!-- Tab Navigation Bar -->
+    <nav class="tabs-bar">
+      <button class="tab-btn active" data-tab="tab-calculator">Calculator</button>
+      <button class="tab-btn" data-tab="tab-converter">Converter</button>
+      <button class="tab-btn" data-tab="tab-history">History <span id="historyCountBadge"></span></button>
+    </nav>
+
+    <!-- TAB 1: CALCULATOR -->
+    <main id="tab-calculator" class="tab-content active">
+      <!-- Preset Formulas -->
+      <div class="presets-bar">
+        <span style="font-size: 10px; font-weight: 800; color: var(--text-muted); text-transform: uppercase;">Presets:</span>
+        <button class="preset-chip" data-expr="12' 4 1/2&quot; + 6' 3&quot; - 2' 1 1/4&quot; * 3">12' 4 1/2" + 6' 3" - 2' 1 1/4" * 3</button>
+        <button class="preset-chip" data-expr="10' 0&quot; * 12' 6&quot;">10' * 12' 6" (Area)</button>
+        <button class="preset-chip" data-expr="15' 8 3/4&quot; / 2">15' 8 3/4" / 2</button>
+        <button class="preset-chip" data-expr="8' 9&quot; + 5' 4 1/8&quot;">8' 9" + 5' 4 1/8"</button>
+      </div>
+
+      <!-- Display Card -->
+      <div class="display-card">
+        <div class="display-top">
+          <div class="precision-selector">
+            <span>PRECISION:</span>
+            <select id="precisionSelect">
+              <option value="2">1/2"</option>
+              <option value="4">1/4"</option>
+              <option value="8">1/8"</option>
+              <option value="16" selected>1/16"</option>
+              <option value="32">1/32"</option>
+              <option value="64">1/64"</option>
+            </select>
+          </div>
+          <span id="dimensionBadge" class="dimension-badge length">Length</span>
+        </div>
+
+        <div id="expressionTape" class="expression-tape">0</div>
+        <div id="primaryResult" class="primary-result">0"</div>
+
+        <div id="secondaryReadout" class="secondary-readout">
+          <span id="decimalFeet">0.000 ft</span>
+          <span>·</span>
+          <span id="decimalInches">0.000 in</span>
+          <span>·</span>
+          <span id="metricResult" class="metric-tag">0 mm</span>
+        </div>
+      </div>
+
+      <!-- Construction Keypad -->
+      <div class="keypad-grid">
+        <!-- Fractions Row -->
+        <div class="key-row key-row-4">
+          <button class="calc-key key-fraction" data-action="fraction" data-num="1" data-den="2">1/2"</button>
+          <button class="calc-key key-fraction" data-action="fraction" data-num="1" data-den="4">1/4"</button>
+          <button class="calc-key key-fraction" data-action="fraction" data-num="1" data-den="8">1/8"</button>
+          <button class="calc-key key-fraction" data-action="fraction" data-num="1" data-den="16">1/16"</button>
+        </div>
+
+        <!-- Units & Clear Row -->
+        <div class="key-row key-row-5">
+          <button class="calc-key key-unit" data-action="unit" data-unit="ft">ft (')</button>
+          <button class="calc-key key-unit" data-action="unit" data-unit="in">in (")</button>
+          <button class="calc-key" data-action="slash">/</button>
+          <button class="calc-key key-clear" data-action="ce">CE</button>
+          <button class="calc-key key-clear" data-action="c">C</button>
+        </div>
+
+        <!-- 7 8 9 ÷ ( -->
+        <div class="key-row key-row-5">
+          <button class="calc-key" data-digit="7">7</button>
+          <button class="calc-key" data-digit="8">8</button>
+          <button class="calc-key" data-digit="9">9</button>
+          <button class="calc-key key-op" data-action="op" data-op="÷">÷</button>
+          <button class="calc-key" data-action="paren" data-paren="(">(</button>
+        </div>
+
+        <!-- 4 5 6 × ) -->
+        <div class="key-row key-row-5">
+          <button class="calc-key" data-digit="4">4</button>
+          <button class="calc-key" data-digit="5">5</button>
+          <button class="calc-key" data-digit="6">6</button>
+          <button class="calc-key key-op" data-action="op" data-op="×">×</button>
+          <button class="calc-key" data-action="paren" data-paren=")">)</button>
+        </div>
+
+        <!-- 1 2 3 - ⌫ -->
+        <div class="key-row key-row-5">
+          <button class="calc-key" data-digit="1">1</button>
+          <button class="calc-key" data-digit="2">2</button>
+          <button class="calc-key" data-digit="3">3</button>
+          <button class="calc-key key-op" data-action="op" data-op="-">-</button>
+          <button class="calc-key key-clear" data-action="backspace" title="Backspace">⌫</button>
+        </div>
+
+        <!-- 0 . + = -->
+        <div class="key-row key-row-5">
+          <button class="calc-key" data-digit="0">0</button>
+          <button class="calc-key" data-digit=".">.</button>
+          <button class="calc-key key-op" data-action="op" data-op="+">+</button>
+          <button class="calc-key key-equals" data-action="equals">=</button>
+        </div>
+      </div>
+    </main>
+
+    <!-- TAB 2: CONVERTER -->
+    <section id="tab-converter" class="tab-content">
+      <div class="converter-mode-selector">
+        <button id="btnModeLength" class="conv-mode-btn active">Length Conversion</button>
+        <button id="btnModeArea" class="conv-mode-btn">Area Conversion</button>
+      </div>
+
+      <!-- FROM Card -->
+      <div class="converter-card">
+        <div class="conv-label">From Magnitude & Unit</div>
+        <div class="conv-input-row">
+          <input type="number" id="convInputValue" class="conv-input" value="10" step="any">
+          <select id="convFromUnit" class="conv-select"></select>
+        </div>
+      </div>
+
+      <!-- Swap Action -->
+      <div class="swap-btn-container">
+        <button id="btnSwapUnits" class="swap-btn" title="Swap From and To units">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="m3 16 4 4 4-4"/><path d="M7 20V4"/><path d="m21 8-4-4-4 4"/><path d="M17 4v16"/>
+          </svg>
+        </button>
+      </div>
+
+      <!-- TO Card -->
+      <div class="converter-card">
+        <div class="conv-label to">To Unit (Converted)</div>
+        <select id="convToUnit" class="conv-select"></select>
+
+        <div class="conv-result-box">
+          <div style="display: flex; align-items: baseline;">
+            <span id="convResultValue" class="conv-result-value">3.048</span>
+            <span id="convResultSymbol" class="conv-result-symbol">m</span>
+          </div>
+
+          <div id="convFramingRow" class="conv-framing-breakdown">
+            <span>Imperial Framing Breakdown:</span>
+            <strong id="convFramingResult">10' 0"</strong>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- TAB 3: HISTORY -->
+    <section id="tab-history" class="tab-content">
+      <div class="history-toolbar">
+        <input type="text" id="historySearch" class="search-input" placeholder="Search saved calculations...">
+        <button id="btnClearHistory" class="btn-action-small danger" title="Clear all history">Clear</button>
+      </div>
+
+      <div id="historyList" class="history-list"></div>
+    </section>
+  </div>
+
+  <div id="toast" class="toast">Copied to clipboard</div>
+
+  <script>
+    /* =========================================================================
+       1. IMPERIAL MATH ENGINE
+       Unified base float (inches) parser, AST shunting-yard evaluator,
+       Euclidean GCD fraction reduction, and strict Unit Semantics.
+       ========================================================================= */
+
+    const ImperialMathEngine = (() => {
+      // Euclidean Greatest Common Divisor
+      function gcd(a, b) {
+        let x = Math.abs(a);
+        let y = Math.abs(b);
+        while (y !== 0) {
+          const temp = y;
+          y = x % y;
+          x = temp;
+        }
+        return x || 1;
+      }
+
+      // Convert inches into Imperial feet-and-inches with reduced fractions
+      function formatImperial(totalInches, precision = 16) {
+        if (isNaN(totalInches)) return 'Error';
+        if (!isFinite(totalInches)) return totalInches > 0 ? 'Infinity' : '-Infinity';
+
+        const isNegative = totalInches < 0;
+        const absInches = Math.abs(totalInches);
+
+        let feet = Math.floor(absInches / 12);
+        let remInches = absInches - feet * 12;
+        let wholeInches = Math.floor(remInches);
+        const fracPart = remInches - wholeInches;
+
+        let num = Math.round(fracPart * precision);
+        let den = precision;
+
+        if (num === den) {
+          wholeInches += 1;
+          num = 0;
+        }
+        if (wholeInches === 12) {
+          feet += 1;
+          wholeInches = 0;
+        }
+
+        if (num > 0) {
+          const common = gcd(num, den);
+          num /= common;
+          den /= common;
+        }
+
+        const sign = isNegative ? '-' : '';
+
+        if (feet > 0) {
+          if (num > 0) {
+            return wholeInches > 0
+              ? `${sign}${feet}' ${wholeInches} ${num}/${den}"`
+              : `${sign}${feet}' ${num}/${den}"`;
+          } else if (wholeInches > 0) {
+            return `${sign}${feet}' ${wholeInches}"`;
+          } else {
+            return `${sign}${feet}'`;
+          }
+        } else {
+          if (num > 0) {
+            return wholeInches > 0
+              ? `${sign}${wholeInches} ${num}/${den}"`
+              : `${sign}${num}/${den}"`;
+          } else {
+            return `${sign}${wholeInches}"`;
+          }
+        }
+      }
+
+      function formatArea(sqInches) {
+        if (isNaN(sqInches) || !isFinite(sqInches)) return { imperial: 'Error', metric: 'Error' };
+        const sqFeet = sqInches / 144;
+        const sqMeters = sqInches * 0.00064516;
+        return {
+          imperial: `${sqFeet.toFixed(2)} sq ft`,
+          metric: `${sqMeters.toFixed(2)} m²`
+        };
+      }
+
+      function parseSingleValue(str) {
+        const trimmed = str.trim();
+        if (!trimmed) return null;
+
+        // Area: sq ft or sq in
+        const areaFt = trimmed.match(/^([+-]?\d+(?:\.\d+)?)\s*(?:sq\s*ft|sqft|ft2|ft²)$/i);
+        if (areaFt) return { value: parseFloat(areaFt[1]) * 144, dimension: 'area' };
+
+        const areaIn = trimmed.match(/^([+-]?\d+(?:\.\d+)?)\s*(?:sq\s*in|sqin|in2|in²)$/i);
+        if (areaIn) return { value: parseFloat(areaIn[1]), dimension: 'area' };
+
+        // Feet and inches with fraction: e.g. 12' 4 1/2" or 12' 4"
+        const ftInFrac = trimmed.match(/^([+-]?\d+(?:\.\d+)?)\s*'(?:\s*(\d+))?(?:\s*(\d+)\s*\/\s*(\d+))?\s*"$/);
+        if (ftInFrac) {
+          const feet = parseFloat(ftInFrac[1]);
+          const sign = feet < 0 ? -1 : 1;
+          const wholeIn = ftInFrac[2] ? parseFloat(ftInFrac[2]) : 0;
+          const num = ftInFrac[3] ? parseFloat(ftInFrac[3]) : 0;
+          const den = ftInFrac[4] ? parseFloat(ftInFrac[4]) : 1;
+          const frac = den > 0 ? num / den : 0;
+          return { value: (Math.abs(feet) * 12 + wholeIn + frac) * sign, dimension: 'length' };
+        }
+
+        // Feet only: 12'
+        const ftOnly = trimmed.match(/^([+-]?\d+(?:\.\d+)?)\s*'$/);
+        if (ftOnly) return { value: parseFloat(ftOnly[1]) * 12, dimension: 'length' };
+
+        // Inches with fraction: 4 1/2" or 3/4" or 10"
+        const inFrac = trimmed.match(/^([+-]?\d+)?\s*(?:(\d+)\s*\/\s*(\d+))?\s*"$/);
+        if (inFrac && (inFrac[1] || inFrac[2])) {
+          const wholeIn = inFrac[1] ? parseFloat(inFrac[1]) : 0;
+          const sign = wholeIn < 0 ? -1 : 1;
+          const num = inFrac[2] ? parseFloat(inFrac[2]) : 0;
+          const den = inFrac[3] ? parseFloat(inFrac[3]) : 1;
+          const frac = den > 0 ? num / den : 0;
+          return { value: (Math.abs(wholeIn) + frac) * (wholeIn !== 0 ? sign : 1), dimension: 'length' };
+        }
+
+        // Standalone fraction: 1/2
+        const fracOnly = trimmed.match(/^(\d+)\s*\/\s*(\d+)$/);
+        if (fracOnly) {
+          const den = parseFloat(fracOnly[2]);
+          if (den === 0) throw new Error('Division by zero');
+          return { value: parseFloat(fracOnly[1]) / den, dimension: 'scalar' };
+        }
+
+        // Scalar
+        const scalar = parseFloat(trimmed);
+        if (!isNaN(scalar) && /^[+-]?\d+(?:\.\d+)?$/.test(trimmed)) {
+          return { value: scalar, dimension: 'scalar' };
+        }
+
+        return null;
+      }
+
+      function tokenize(expr) {
+        const tokens = [];
+        const normalized = expr.replace(/×/g, '*').replace(/÷/g, '/').trim();
+        let i = 0;
+
+        while (i < normalized.length) {
+          const char = normalized[i];
+          if (/\s/.test(char)) { i++; continue; }
+          if (char === '(') { tokens.push({ type: 'LPAREN', value: '(' }); i++; continue; }
+          if (char === ')') { tokens.push({ type: 'RPAREN', value: ')' }); i++; continue; }
+
+          if (char === '+' || char === '-' || char === '*') {
+            const prev = tokens[tokens.length - 1];
+            const isUnary = (char === '-' || char === '+') && (!prev || prev.type === 'OPERATOR' || prev.type === 'LPAREN');
+            if (!isUnary) {
+              tokens.push({ type: 'OPERATOR', value: char });
+              i++;
+              continue;
+            }
+          }
+
+          const sub = normalized.slice(i);
+
+          // Feet & Inches
+          const ftIn = sub.match(/^[+-]?\d+(?:\.\d+)?\s*'(?:\s*\d+)?(?:\s*\d+\s*\/\s*\d+)?\s*"/);
+          if (ftIn) {
+            const parsed = parseSingleValue(ftIn[0]);
+            if (parsed) { tokens.push({ type: 'OPERAND', value: parsed }); i += ftIn[0].length; continue; }
+          }
+
+          // Feet only
+          const ft = sub.match(/^[+-]?\d+(?:\.\d+)?\s*'/);
+          if (ft) {
+            const parsed = parseSingleValue(ft[0]);
+            if (parsed) { tokens.push({ type: 'OPERAND', value: parsed }); i += ft[0].length; continue; }
+          }
+
+          // Inches only
+          const inMatch = sub.match(/^(?:[+-]?\d+)?\s*(?:\d+\s*\/\s*\d+)?\s*"/);
+          if (inMatch && inMatch[0].includes('"')) {
+            const parsed = parseSingleValue(inMatch[0]);
+            if (parsed) { tokens.push({ type: 'OPERAND', value: parsed }); i += inMatch[0].length; continue; }
+          }
+
+          // Division operator
+          if (char === '/') {
+            tokens.push({ type: 'OPERATOR', value: '/' });
+            i++;
+            continue;
+          }
+
+          // Scalar
+          const numMatch = sub.match(/^[+-]?\d+(?:\.\d+)?/);
+          if (numMatch) {
+            tokens.push({ type: 'OPERAND', value: { value: parseFloat(numMatch[0]), dimension: 'scalar' } });
+            i += numMatch[0].length;
+            continue;
+          }
+
+          throw new Error(`Unexpected character: '${char}'`);
+        }
+        return tokens;
+      }
+
+      function applyOperation(op, left, right) {
+        if (op === '/' && right.value === 0) throw new Error('Division by zero');
+
+        if (op === '+') {
+          if (left.dimension === right.dimension) {
+            return { value: left.value + right.value, dimension: left.dimension };
+          }
+          throw new Error(`Cannot add ${left.dimension} and ${right.dimension}`);
+        }
+        if (op === '-') {
+          if (left.dimension === right.dimension) {
+            return { value: left.value - right.value, dimension: left.dimension };
+          }
+          throw new Error(`Cannot subtract ${right.dimension} from ${left.dimension}`);
+        }
+        if (op === '*') {
+          if (left.dimension === 'scalar' && right.dimension === 'scalar') return { value: left.value * right.value, dimension: 'scalar' };
+          if (left.dimension === 'length' && right.dimension === 'scalar') return { value: left.value * right.value, dimension: 'length' };
+          if (left.dimension === 'scalar' && right.dimension === 'length') return { value: left.value * right.value, dimension: 'length' };
+          if (left.dimension === 'length' && right.dimension === 'length') return { value: left.value * right.value, dimension: 'area' };
+          if (left.dimension === 'area' && right.dimension === 'scalar') return { value: left.value * right.value, dimension: 'area' };
+          if (left.dimension === 'scalar' && right.dimension === 'area') return { value: left.value * right.value, dimension: 'area' };
+          throw new Error(`Unsupported multiplication: ${left.dimension} * ${right.dimension}`);
+        }
+        if (op === '/') {
+          if (left.dimension === 'scalar' && right.dimension === 'scalar') return { value: left.value / right.value, dimension: 'scalar' };
+          if (left.dimension === 'length' && right.dimension === 'scalar') return { value: left.value / right.value, dimension: 'length' };
+          if (left.dimension === 'length' && right.dimension === 'length') return { value: left.value / right.value, dimension: 'scalar' };
+          if (left.dimension === 'area' && right.dimension === 'length') return { value: left.value / right.value, dimension: 'length' };
+          if (left.dimension === 'area' && right.dimension === 'scalar') return { value: left.value / right.value, dimension: 'area' };
+          if (left.dimension === 'area' && right.dimension === 'area') return { value: left.value / right.value, dimension: 'scalar' };
+          throw new Error(`Cannot divide ${left.dimension} by ${right.dimension}`);
+        }
+        throw new Error(`Unknown operator: ${op}`);
+      }
+
+      function evaluate(expr, precision = 16) {
+        try {
+          const tokens = tokenize(expr);
+          if (tokens.length === 0) {
+            return { dimension: 'scalar', value: 0, formattedImperial: '0"', formattedMetric: '0 mm' };
+          }
+
+          const outputQueue = [];
+          const operatorStack = [];
+          const precedence = { '+': 1, '-': 1, '*': 2, '/': 2 };
+
+          for (const token of tokens) {
+            if (token.type === 'OPERAND') {
+              outputQueue.push(token);
+            } else if (token.type === 'OPERATOR') {
+              while (
+                operatorStack.length > 0 &&
+                operatorStack[operatorStack.length - 1].type === 'OPERATOR' &&
+                precedence[operatorStack[operatorStack.length - 1].value] >= precedence[token.value]
+              ) {
+                outputQueue.push(operatorStack.pop());
+              }
+              operatorStack.push(token);
+            } else if (token.type === 'LPAREN') {
+              operatorStack.push(token);
+            } else if (token.type === 'RPAREN') {
+              while (operatorStack.length > 0 && operatorStack[operatorStack.length - 1].type !== 'LPAREN') {
+                outputQueue.push(operatorStack.pop());
+              }
+              if (operatorStack.length === 0) throw new Error('Mismatched parentheses');
+              operatorStack.pop();
+            }
+          }
+
+          while (operatorStack.length > 0) {
+            const top = operatorStack.pop();
+            if (top.type === 'LPAREN' || top.type === 'RPAREN') throw new Error('Mismatched parentheses');
+            outputQueue.push(top);
+          }
+
+          const evalStack = [];
+          for (const token of outputQueue) {
+            if (token.type === 'OPERAND') {
+              evalStack.push(token.value);
+            } else if (token.type === 'OPERATOR') {
+              if (evalStack.length < 2) throw new Error('Incomplete expression');
+              const right = evalStack.pop();
+              const left = evalStack.pop();
+              evalStack.push(applyOperation(token.value, left, right));
+            }
+          }
+
+          if (evalStack.length !== 1) throw new Error('Invalid expression syntax');
+
+          const finalVal = evalStack[0];
+          return formatResult(finalVal, precision);
+        } catch (err) {
+          return {
+            dimension: 'scalar',
+            value: 0,
+            formattedImperial: 'Error',
+            formattedMetric: 'Error',
+            isError: true,
+            errorMessage: err.message || 'Calculation error'
+          };
+        }
+      }
+
+      function formatResult(res, precision = 16) {
+        const val = res.value;
+        if (res.dimension === 'length') {
+          const imp = formatImperial(val, precision);
+          const decFt = `${(val / 12).toFixed(4).replace(/\.?0+$/, '')} ft`;
+          const decIn = `${val.toFixed(3).replace(/\.?0+$/, '')} in`;
+          const meters = val * 0.0254;
+          const metric = meters >= 1
+            ? `${meters.toFixed(3).replace(/\.?0+$/, '')} m`
+            : `${(val * 25.4).toFixed(1).replace(/\.?0+$/, '')} mm`;
+          return {
+            dimension: 'length',
+            value: val,
+            formattedImperial: imp,
+            formattedDecimalFeet: decFt,
+            formattedDecimalInches: decIn,
+            formattedMetric: metric
+          };
+        }
+        if (res.dimension === 'area') {
+          const area = formatArea(val);
+          return {
+            dimension: 'area',
+            value: val,
+            formattedImperial: area.imperial,
+            formattedDecimalFeet: `${(val / 144).toFixed(3)} sq ft`,
+            formattedDecimalInches: `${val.toFixed(1)} sq in`,
+            formattedMetric: area.metric
+          };
+        }
+        const scalarStr = Number.isInteger(val) ? val.toString() : val.toFixed(4).replace(/\.?0+$/, '');
+        return {
+          dimension: 'scalar',
+          value: val,
+          formattedImperial: scalarStr,
+          formattedMetric: scalarStr
+        };
+      }
+
+      return { evaluate, formatImperial };
+    })();
+
+    /* =========================================================================
+       2. UNIT CONVERTER ENGINE (7 Length + 8 Area Units)
+       ========================================================================= */
+
+    const UnitConverter = (() => {
+      const LENGTH_UNITS = [
+        { id: 'mm', name: 'Millimeters (mm)', factor: 0.001, symbol: 'mm' },
+        { id: 'cm', name: 'Centimeters (cm)', factor: 0.01, symbol: 'cm' },
+        { id: 'm', name: 'Meters (m)', factor: 1.0, symbol: 'm' },
+        { id: 'km', name: 'Kilometers (km)', factor: 1000.0, symbol: 'km' },
+        { id: 'in', name: 'Inches (in)', factor: 0.0254, symbol: 'in' },
+        { id: 'ft', name: 'Feet (ft)', factor: 0.3048, symbol: 'ft' },
+        { id: 'yd', name: 'Yards (yd)', factor: 0.9144, symbol: 'yd' }
+      ];
+
+      const AREA_UNITS = [
+        { id: 'mm2', name: 'Sq Millimeters (mm²)', factor: 1e-6, symbol: 'mm²' },
+        { id: 'cm2', name: 'Sq Centimeters (cm²)', factor: 1e-4, symbol: 'cm²' },
+        { id: 'm2', name: 'Sq Meters (m²)', factor: 1.0, symbol: 'm²' },
+        { id: 'ha', name: 'Hectares (ha)', factor: 10000.0, symbol: 'ha' },
+        { id: 'in2', name: 'Sq Inches (in²)', factor: 0.00064516, symbol: 'in²' },
+        { id: 'ft2', name: 'Sq Feet (ft²)', factor: 0.09290304, symbol: 'ft²' },
+        { id: 'yd2', name: 'Sq Yards (yd²)', factor: 0.83612736, symbol: 'yd²' },
+        { id: 'ac', name: 'Acres (ac)', factor: 4046.8564224, symbol: 'ac' }
+      ];
+
+      function convert(val, fromId, toId, isArea) {
+        const units = isArea ? AREA_UNITS : LENGTH_UNITS;
+        const from = units.find(u => u.id === fromId);
+        const to = units.find(u => u.id === toId);
+        if (!from || !to || isNaN(val)) return 0;
+        const base = val * from.factor;
+        return base / to.factor;
+      }
+
+      function formatValue(v) {
+        if (isNaN(v) || v === 0) return '0';
+        const abs = Math.abs(v);
+        if (abs < 0.000001 || abs >= 1e8) return v.toExponential(4);
+        if (abs < 0.001) return v.toFixed(6).replace(/\.?0+$/, '');
+        if (abs < 1) return v.toFixed(4).replace(/\.?0+$/, '');
+        return v.toLocaleString(undefined, { maximumFractionDigits: 4 });
+      }
+
+      return { LENGTH_UNITS, AREA_UNITS, convert, formatValue };
+    })();
+
+    /* =========================================================================
+       3. APP STATE & UI COORDINATION
+       ========================================================================= */
+
+    const AppState = {
+      expression: '',
+      isEvaluated: false,
+      precision: 16,
+      lastResult: null,
+      history: [],
+      // Converter state
+      isAreaMode: false,
+      convInput: 10,
+      convFrom: 'ft',
+      convTo: 'm'
+    };
+
+    const STORAGE_KEY = 'construction_calc_m3_history';
+
+    // DOM Elements
+    const elements = {
+      expressionTape: document.getElementById('expressionTape'),
+      primaryResult: document.getElementById('primaryResult'),
+      decimalFeet: document.getElementById('decimalFeet'),
+      decimalInches: document.getElementById('decimalInches'),
+      metricResult: document.getElementById('metricResult'),
+      dimensionBadge: document.getElementById('dimensionBadge'),
+      precisionSelect: document.getElementById('precisionSelect'),
+      historyCountBadge: document.getElementById('historyCountBadge'),
+      historyList: document.getElementById('historyList'),
+      historySearch: document.getElementById('historySearch'),
+      btnClearHistory: document.getElementById('btnClearHistory'),
+      btnCopyResult: document.getElementById('btnCopyResult'),
+      // Converter elements
+      btnModeLength: document.getElementById('btnModeLength'),
+      btnModeArea: document.getElementById('btnModeArea'),
+      convInputValue: document.getElementById('convInputValue'),
+      convFromUnit: document.getElementById('convFromUnit'),
+      convToUnit: document.getElementById('convToUnit'),
+      convResultValue: document.getElementById('convResultValue'),
+      convResultSymbol: document.getElementById('convResultSymbol'),
+      btnSwapUnits: document.getElementById('btnSwapUnits'),
+      convFramingRow: document.getElementById('convFramingRow'),
+      convFramingResult: document.getElementById('convFramingResult'),
+      toast: document.getElementById('toast')
+    };
+
+    function showToast(msg) {
+      elements.toast.textContent = msg;
+      elements.toast.classList.add('show');
+      setTimeout(() => elements.toast.classList.remove('show'), 1600);
+    }
+
+    function triggerHaptic() {
+      if (navigator.vibrate) {
+        try { navigator.vibrate(12); } catch (_) {}
+      }
+    }
+
+    // --- Calculator UI Update ---
+    function updateCalculatorDisplay() {
+      elements.expressionTape.textContent = AppState.expression || '0';
+      elements.expressionTape.scrollLeft = elements.expressionTape.scrollWidth;
+
+      const trimmed = AppState.expression.trim();
+      if (!trimmed) {
+        elements.primaryResult.textContent = '0"';
+        elements.primaryResult.classList.remove('error');
+        elements.decimalFeet.textContent = '0.000 ft';
+        elements.decimalInches.textContent = '0.000 in';
+        elements.metricResult.textContent = '0 mm';
+        elements.dimensionBadge.textContent = 'Length';
+        elements.dimensionBadge.className = 'dimension-badge length';
+        return;
+      }
+
+      const res = ImperialMathEngine.evaluate(trimmed, AppState.precision);
+      if (!res.isError) {
+        AppState.lastResult = res;
+        elements.primaryResult.textContent = res.formattedImperial;
+        elements.primaryResult.classList.remove('error');
+
+        elements.decimalFeet.textContent = res.formattedDecimalFeet || `${res.value}`;
+        elements.decimalInches.textContent = res.formattedDecimalInches || '';
+        elements.metricResult.textContent = res.formattedMetric || '';
+
+        elements.dimensionBadge.textContent = res.dimension;
+        elements.dimensionBadge.className = `dimension-badge ${res.dimension}`;
+      } else {
+        if (AppState.isEvaluated) {
+          elements.primaryResult.textContent = res.errorMessage;
+          elements.primaryResult.classList.add('error');
+        }
+      }
+    }
+
+    function handleDigit(d) {
+      triggerHaptic();
+      AppState.expression = AppState.isEvaluated ? d : AppState.expression + d;
+      AppState.isEvaluated = false;
+      updateCalculatorDisplay();
+    }
+
+    function handleUnit(unit) {
+      triggerHaptic();
+      if (!AppState.expression) return;
+      const lastChar = AppState.expression.slice(-1);
+      if (/\d|\./.test(lastChar)) {
+        AppState.expression += (unit === 'ft' ? "' " : '" ');
+      }
+      AppState.isEvaluated = false;
+      updateCalculatorDisplay();
+    }
+
+    function handleFraction(num, den) {
+      triggerHaptic();
+      const fracStr = `${num}/${den}" `;
+      if (AppState.isEvaluated) {
+        AppState.expression = fracStr;
+      } else {
+        const lastChar = AppState.expression.slice(-1);
+        AppState.expression += (/\d/.test(lastChar) ? ` ${fracStr}` : fracStr);
+      }
+      AppState.isEvaluated = false;
+      updateCalculatorDisplay();
+    }
+
+    function handleSlash() {
+      triggerHaptic();
+      AppState.expression += '/';
+      AppState.isEvaluated = false;
+      updateCalculatorDisplay();
+    }
+
+    function handleOperator(op) {
+      triggerHaptic();
+      if (!AppState.expression && op !== '-') return;
+      AppState.expression = `${AppState.expression.trimEnd()} ${op} `;
+      AppState.isEvaluated = false;
+      updateCalculatorDisplay();
+    }
+
+    function handleParen(p) {
+      triggerHaptic();
+      AppState.expression = AppState.isEvaluated ? p : AppState.expression + p;
+      AppState.isEvaluated = false;
+      updateCalculatorDisplay();
+    }
+
+    function handleBackspace() {
+      triggerHaptic();
+      if (!AppState.expression) return;
+      AppState.expression = AppState.expression.slice(0, -1).trimEnd();
+      AppState.isEvaluated = false;
+      updateCalculatorDisplay();
+    }
+
+    function handleClear() {
+      triggerHaptic();
+      AppState.expression = '';
+      AppState.isEvaluated = false;
+      AppState.lastResult = null;
+      updateCalculatorDisplay();
+    }
+
+    function handleClearEntry() {
+      triggerHaptic();
+      const tokens = AppState.expression.trimEnd().split(/\s+/);
+      if (tokens.length <= 1) {
+        handleClear();
+      } else {
+        tokens.pop();
+        AppState.expression = tokens.join(' ') + ' ';
+        updateCalculatorDisplay();
+      }
+    }
+
+    function handleEquals() {
+      triggerHaptic();
+      const trimmed = AppState.expression.trim();
+      if (!trimmed) return;
+
+      const res = ImperialMathEngine.evaluate(trimmed, AppState.precision);
+      AppState.isEvaluated = true;
+      AppState.lastResult = res;
+
+      if (!res.isError) {
+        saveHistoryRecord({
+          id: `calc-${Date.now()}`,
+          expression: trimmed,
+          resultImperial: res.formattedImperial,
+          resultDecimal: res.formattedDecimalFeet || res.formattedImperial,
+          resultMetric: res.formattedMetric,
+          dimension: res.dimension,
+          timestamp: Date.now()
+        });
+      }
+      updateCalculatorDisplay();
+    }
+
+    // --- History Storage & UI ---
+    function loadHistory() {
+      try {
+        const saved = localStorage.getItem(STORAGE_KEY);
+        if (saved) {
+          AppState.history = JSON.parse(saved);
+        } else {
+          // Initial sample calculation
+          AppState.history = [
+            {
+              id: 'sample-1',
+              expression: "12' 4 1/2\" + 6' 3\" - 2' 1 1/4\" * 3",
+              resultImperial: "12' 3 3/4\"",
+              resultDecimal: "12.3125 ft",
+              resultMetric: "3.753 m",
+              dimension: "length",
+              timestamp: Date.now()
+            }
+          ];
+        }
+      } catch (_) {
+        AppState.history = [];
+      }
+      renderHistory();
+    }
+
+    function saveHistoryRecord(record) {
+      AppState.history.unshift(record);
+      if (AppState.history.length > 100) AppState.history.pop();
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(AppState.history));
+      } catch (_) {}
+      renderHistory();
+    }
+
+    function renderHistory() {
+      const q = (elements.historySearch.value || '').toLowerCase();
+      const filtered = AppState.history.filter(h =>
+        h.expression.toLowerCase().includes(q) ||
+        h.resultImperial.toLowerCase().includes(q)
+      );
+
+      elements.historyCountBadge.textContent = AppState.history.length ? `(${AppState.history.length})` : '';
+
+      if (filtered.length === 0) {
+        elements.historyList.innerHTML = `<div class="empty-state">${q ? 'No matching calculations.' : 'No saved calculations yet.'}</div>`;
+        return;
+      }
+
+      elements.historyList.innerHTML = filtered.map(item => {
+        const dateStr = new Date(item.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', month: 'short', day: 'numeric' });
+        return `
+          <div class="history-item" data-expr="${encodeURIComponent(item.resultImperial)}">
+            <div class="history-meta">
+              <span>${dateStr}</span>
+              <span class="dimension-badge ${item.dimension}">${item.dimension}</span>
+            </div>
+            <div class="history-expr">${item.expression}</div>
+            <div class="history-res-row">
+              <span class="history-res-main">= ${item.resultImperial}</span>
+              <span class="history-res-sub">${item.resultDecimal} · ${item.resultMetric}</span>
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      // Click to recall
+      elements.historyList.querySelectorAll('.history-item').forEach(el => {
+        el.addEventListener('click', () => {
+          const expr = decodeURIComponent(el.getAttribute('data-expr'));
+          AppState.expression = expr;
+          AppState.isEvaluated = false;
+          updateCalculatorDisplay();
+          switchTab('tab-calculator');
+          showToast(`Loaded ${expr}`);
+        });
+      });
+    }
+
+    // --- Converter Setup & UI ---
+    function setupConverter() {
+      function populateUnits() {
+        const units = AppState.isAreaMode ? UnitConverter.AREA_UNITS : UnitConverter.LENGTH_UNITS;
+        elements.convFromUnit.innerHTML = units.map(u => `<option value="${u.id}">${u.name}</option>`).join('');
+        elements.convToUnit.innerHTML = units.map(u => `<option value="${u.id}">${u.name}</option>`).join('');
+
+        if (AppState.isAreaMode) {
+          AppState.convFrom = 'ft2';
+          AppState.convTo = 'm2';
+        } else {
+          AppState.convFrom = 'ft';
+          AppState.convTo = 'm';
+        }
+        elements.convFromUnit.value = AppState.convFrom;
+        elements.convToUnit.value = AppState.convTo;
+      }
+
+      populateUnits();
+      updateConverter();
+
+      elements.btnModeLength.addEventListener('click', () => {
+        AppState.isAreaMode = false;
+        elements.btnModeLength.classList.add('active');
+        elements.btnModeArea.classList.remove('active');
+        populateUnits();
+        updateConverter();
+      });
+
+      elements.btnModeArea.addEventListener('click', () => {
+        AppState.isAreaMode = true;
+        elements.btnModeArea.classList.add('active');
+        elements.btnModeLength.classList.remove('active');
+        populateUnits();
+        updateConverter();
+      });
+
+      elements.convInputValue.addEventListener('input', (e) => {
+        AppState.convInput = parseFloat(e.target.value) || 0;
+        updateConverter();
+      });
+
+      elements.convFromUnit.addEventListener('change', (e) => {
+        AppState.convFrom = e.target.value;
+        updateConverter();
+      });
+
+      elements.convToUnit.addEventListener('change', (e) => {
+        AppState.convTo = e.target.value;
+        updateConverter();
+      });
+
+      elements.btnSwapUnits.addEventListener('click', () => {
+        triggerHaptic();
+        const temp = AppState.convFrom;
+        AppState.convFrom = AppState.convTo;
+        AppState.convTo = temp;
+        elements.convFromUnit.value = AppState.convFrom;
+        elements.convToUnit.value = AppState.convTo;
+        updateConverter();
+      });
+    }
+
+    function updateConverter() {
+      const units = AppState.isAreaMode ? UnitConverter.AREA_UNITS : UnitConverter.LENGTH_UNITS;
+      const res = UnitConverter.convert(AppState.convInput, AppState.convFrom, AppState.convTo, AppState.isAreaMode);
+      elements.convResultValue.textContent = UnitConverter.formatValue(res);
+
+      const toUnit = units.find(u => u.id === AppState.convTo);
+      elements.convResultSymbol.textContent = toUnit ? toUnit.symbol : '';
+
+      // Imperial framing preview
+      if (!AppState.isAreaMode) {
+        elements.convFramingRow.style.display = 'flex';
+        let inches = 0;
+        if (AppState.convTo === 'ft') inches = res * 12;
+        else if (AppState.convTo === 'in') inches = res;
+        else inches = UnitConverter.convert(res, AppState.convTo, 'in', false);
+        elements.convFramingResult.textContent = ImperialMathEngine.formatImperial(inches, 16);
+      } else {
+        elements.convFramingRow.style.display = 'none';
+      }
+    }
+
+    // --- Tab Switching ---
+    function switchTab(targetId) {
+      document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.classList.toggle('active', btn.getAttribute('data-tab') === targetId);
+      });
+      document.querySelectorAll('.tab-content').forEach(content => {
+        content.classList.toggle('active', content.id === targetId);
+      });
+    }
+
+    // --- Event Listeners Initialization ---
+    function initEvents() {
+      // Tabs
+      document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.addEventListener('click', () => switchTab(btn.getAttribute('data-tab')));
+      });
+
+      // Keypad delegation
+      document.querySelector('.keypad-grid').addEventListener('click', (e) => {
+        const btn = e.target.closest('button.calc-key');
+        if (!btn) return;
+
+        if (btn.hasAttribute('data-digit')) {
+          handleDigit(btn.getAttribute('data-digit'));
+        } else if (btn.getAttribute('data-action') === 'fraction') {
+          handleFraction(Number(btn.getAttribute('data-num')), Number(btn.getAttribute('data-den')));
+        } else if (btn.getAttribute('data-action') === 'unit') {
+          handleUnit(btn.getAttribute('data-unit'));
+        } else if (btn.getAttribute('data-action') === 'slash') {
+          handleSlash();
+        } else if (btn.getAttribute('data-action') === 'op') {
+          handleOperator(btn.getAttribute('data-op'));
+        } else if (btn.getAttribute('data-action') === 'paren') {
+          handleParen(btn.getAttribute('data-paren'));
+        } else if (btn.getAttribute('data-action') === 'backspace') {
+          handleBackspace();
+        } else if (btn.getAttribute('data-action') === 'c') {
+          handleClear();
+        } else if (btn.getAttribute('data-action') === 'ce') {
+          handleClearEntry();
+        } else if (btn.getAttribute('data-action') === 'equals') {
+          handleEquals();
+        }
+      });
+
+      // Preset formulas
+      document.querySelectorAll('.preset-chip').forEach(chip => {
+        chip.addEventListener('click', () => {
+          triggerHaptic();
+          AppState.expression = chip.getAttribute('data-expr');
+          AppState.isEvaluated = false;
+          updateCalculatorDisplay();
+        });
+      });
+
+      // Precision Select
+      elements.precisionSelect.addEventListener('change', (e) => {
+        AppState.precision = Number(e.target.value);
+        updateCalculatorDisplay();
+      });
+
+      // History controls
+      elements.historySearch.addEventListener('input', renderHistory);
+      elements.btnClearHistory.addEventListener('click', () => {
+        if (confirm('Clear all calculation history?')) {
+          AppState.history = [];
+          localStorage.removeItem(STORAGE_KEY);
+          renderHistory();
+          showToast('History cleared');
+        }
+      });
+
+      // Copy Active Result
+      elements.btnCopyResult.addEventListener('click', () => {
+        const text = elements.primaryResult.textContent;
+        if (text && text !== '0"' && text !== 'Error') {
+          navigator.clipboard.writeText(text);
+          showToast(`Copied ${text}`);
+        }
+      });
+
+      // Keyboard support
+      window.addEventListener('keydown', (e) => {
+        if (document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'SELECT') return;
+
+        if (e.key >= '0' && e.key <= '9') handleDigit(e.key);
+        else if (e.key === '.') handleDigit('.');
+        else if (e.key === '+') handleOperator('+');
+        else if (e.key === '-') handleOperator('-');
+        else if (e.key === '*') handleOperator('×');
+        else if (e.key === '/') {
+          e.preventDefault();
+          handleOperator('÷');
+        } else if (e.key === 'Enter' || e.key === '=') {
+          e.preventDefault();
+          handleEquals();
+        } else if (e.key === 'Backspace') {
+          handleBackspace();
+        } else if (e.key === 'Escape') {
+          handleClear();
+        } else if (e.key === "'") {
+          handleUnit('ft');
+        } else if (e.key === '"') {
+          handleUnit('in');
+        } else if (e.key === '(' || e.key === ')') {
+          handleParen(e.key);
+        }
+      });
+    }
+
+    // Startup
+    setupConverter();
+    loadHistory();
+    initEvents();
+    updateCalculatorDisplay();
+  </script>
+</body>
+</html>
